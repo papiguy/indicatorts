@@ -198,6 +198,39 @@ export function shiftRightBy(n: number, values: number[]): number[] {
 }
 
 /**
+ * Shift values left by given amount and fill with value.
+ * @param n shift amount.
+ * @param fill fill value.
+ * @param values values array.
+ * @returns shifted and filled values.
+ */
+export function shiftLeftAndFillBy(
+    n: number,
+    fill: number,
+    values: number[]
+): number[] {
+  const length = values.length
+  const result: number[] = Array(length).fill(fill);
+
+  for (let i = n; i < length; i++) {
+    const newIndex = (i - n + length) % length;
+    result[newIndex] = values[i];
+  }
+
+  return result;
+}
+
+/**
+ * Shifts values left by given amount.
+ * @param n shift amount.
+ * @param values values array.
+ * @return shifted values.
+ */
+export function shiftLeftBy(n: number, values: number[]): number[] {
+  return shiftLeftAndFillBy(n, 0, values);
+}
+
+/**
  * Change between the current value and the value n before.
  * @param n shift amount.
  * @param values values array.

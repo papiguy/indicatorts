@@ -2,18 +2,31 @@
 // https://github.com/cinar/indicatorts
 
 import { checkSameLength } from '../../helper/numArray';
-import { Trend } from '../trend';
-
-const PSAR_AF_STEP = 0.02;
-const PSAR_AF_MAX = 0.2;
+import { Trend } from '../types';
 
 /**
  * Parabolic SAR result object.
  */
-export interface ParabolicSar {
+export interface PSARResult {
   trends: Trend[];
-  psar: number[];
+  psarResult: number[];
 }
+
+/**
+ * Optional configuration of parabolic SAR parameters.
+ */
+export interface PSARConfig {
+  step?: number;
+  max?: number;
+}
+
+/**
+ * The default configuration of parabolic SAR.
+ */
+export const PSARDefaultConfig: Required<PSARConfig> = {
+  step: 0.02,
+  max: 0.2,
+};
 
 /**
  * Parabolic SAR. It is a popular technical indicator for identifying the trend
@@ -43,50 +56,56 @@ export interface ParabolicSar {
  * @param highs high values.
  * @param lows low values.
  * @param closings closing values.
+ * @param config configuration.
  * @return psar result.
  */
-export function parabolicSar(
+export function psar(
   highs: number[],
   lows: number[],
-  closings: number[]
-): ParabolicSar {
+  closings: number[],
+  config: PSARConfig = {}
+): PSARResult {
   checkSameLength(highs, lows, closings);
 
+  const { step, max } = {
+    ...PSARDefaultConfig,
+    ...config,
+  };
   const trends = new Array<Trend>(highs.length);
-  const psar = new Array<number>(highs.length);
+  const psarResult = new Array<number>(highs.length);
 
   trends[0] = Trend.FALLING;
-  psar[0] = highs[0];
+  psarResult[0] = highs[0];
 
-  let af = PSAR_AF_STEP;
+  let af = step;
   let ep = lows[0];
 
-  for (let i = 1; i < psar.length; i++) {
-    psar[i] = psar[i - 1] - (psar[i - 1] - ep) * af;
+  for (let i = 1; i < psarResult.length; i++) {
+    psarResult[i] = psarResult[i - 1] - (psarResult[i - 1] - ep) * af;
 
     if (trends[i - 1] === Trend.FALLING) {
-      psar[i] = Math.max(psar[i], highs[i - 1]);
+      psarResult[i] = Math.max(psarResult[i], highs[i - 1]);
       if (i > 1) {
-        psar[i] = Math.max(psar[i], highs[i - 2]);
+        psarResult[i] = Math.max(psarResult[i], highs[i - 2]);
       }
 
-      if (highs[i] >= psar[i]) {
-        psar[i] = ep;
+      if (highs[i] >= psarResult[i]) {
+        psarResult[i] = ep;
       }
     } else {
-      psar[i] = Math.min(psar[i], lows[i - 1]);
+      psarResult[i] = Math.min(psarResult[i], lows[i - 1]);
       if (i > 1) {
-        psar[i] = Math.min(psar[i], lows[i - 2]);
+        psarResult[i] = Math.min(psarResult[i], lows[i - 2]);
       }
 
-      if (lows[i] <= psar[i]) {
-        psar[i] = ep;
+      if (lows[i] <= psarResult[i]) {
+        psarResult[i] = ep;
       }
     }
 
     const prevEp = ep;
 
-    if (psar[i] > closings[i]) {
+    if (psarResult[i] > closings[i]) {
       trends[i] = Trend.FALLING;
       ep = Math.min(ep, lows[i]);
     } else {
@@ -95,14 +114,17 @@ export function parabolicSar(
     }
 
     if (trends[i] !== trends[i - 1]) {
-      af = PSAR_AF_STEP;
-    } else if (prevEp !== ep && af < PSAR_AF_MAX) {
-      af += PSAR_AF_STEP;
+      af = step;
+    } else if (prevEp !== ep && af < max) {
+      af += step;
     }
   }
 
   return {
     trends,
-    psar,
+    psarResult,
   };
 }
+
+// Export full name
+export { psar as parabolicSAR };

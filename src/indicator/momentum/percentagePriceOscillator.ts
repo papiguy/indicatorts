@@ -2,25 +2,34 @@
 // https://github.com/cinar/indicatorts
 
 import { divide, multiplyBy, subtract } from '../../helper/numArray';
-import { ema } from '../trend/ema';
-
-/** Default fast period value. */
-const DEFAULT_FAST_PERIOD = 12;
-
-/** Default slow period value. */
-const DEFAULT_SLOW_PERIOD = 26;
-
-/** Default signal period value. */
-const DEFAULT_SIGNAL_PERIOD = 9;
+import { ema } from '../trend/exponentialMovingAverage';
 
 /**
  * Percentage price oscillator result.
  */
-export interface PercentagePriceOscillator {
-  ppo: number[];
+export interface PPOResult {
+  ppoResult: number[];
   signal: number[];
   histogram: number[];
 }
+
+/**
+ * Optional configuration of PPO parameters.
+ */
+export interface PPOConfig {
+  fast?: number;
+  slow?: number;
+  signal?: number;
+}
+
+/**
+ * The default configuration of PPO.
+ */
+export const PPODefaultConfig: Required<PPOConfig> = {
+  fast: 12,
+  slow: 26,
+  signal: 9,
+};
 
 /**
  * Percentage Price Oscillator (PPO). It is a momentum oscillator for the price.
@@ -31,45 +40,32 @@ export interface PercentagePriceOscillator {
  * Signal = EMA(9, PVO)
  * Histogram = PVO - Signal
  *
- * @param fastPeriod fast period.
- * @param slowPeriod slow period.
- * @param signalPeriod signal period.
  * @param prices price values.
+ * @param config configuration.
  * @returns oscillator result.
  */
-export function percentagePriceOscillator(
-  fastPeriod: number,
-  slowPeriod: number,
-  signalPeriod: number,
-  prices: number[]
-): PercentagePriceOscillator {
-  const fastEma = ema(fastPeriod, prices);
-  const slowEma = ema(slowPeriod, prices);
+export function ppo(prices: number[], config: PPOConfig = {}): PPOResult {
+  const {
+    fast: fastPeriod,
+    slow: slowPeriod,
+    signal: signalPeriod,
+  } = { ...PPODefaultConfig, ...config };
+  const fastEma = ema(prices, { period: fastPeriod });
+  const slowEma = ema(prices, { period: slowPeriod });
 
-  const ppo = multiplyBy(100, divide(subtract(fastEma, slowEma), slowEma));
-  const signal = ema(signalPeriod, ppo);
-  const histogram = subtract(ppo, signal);
+  const ppoResult = multiplyBy(
+    100,
+    divide(subtract(fastEma, slowEma), slowEma)
+  );
+  const signal = ema(ppoResult, { period: signalPeriod });
+  const histogram = subtract(ppoResult, signal);
 
   return {
-    ppo,
+    ppoResult,
     signal,
     histogram,
   };
 }
 
-/**
- * Default Percentage Price Oscillator calculates it with the default periods of 12, 26, 9.
- *
- * @param prices price values.
- * @returns oscillator result.
- */
-export function defaultPercentagePriceOscillator(
-  prices: number[]
-): PercentagePriceOscillator {
-  return percentagePriceOscillator(
-    DEFAULT_FAST_PERIOD,
-    DEFAULT_SLOW_PERIOD,
-    DEFAULT_SIGNAL_PERIOD,
-    prices
-  );
-}
+// Export full name
+export { ppo as percentagePriceOscillator };
